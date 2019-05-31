@@ -1,15 +1,4 @@
-from cashproof.cashproof import BuildAst, Funcs
-from cashproof.opcodes import Opcode
+from cashproof.stack import StackStrict
 
-funcs = Funcs()
-build_a = BuildAst('a_', ['x', 'y'], funcs)
-build_a.add_op(Opcode.OP_4)
-build_a.add_op(Opcode.OP_CAT)
-build_a.add_op(Opcode.OP_CAT)
+stack = StackStrict()
 
-build_b = BuildAst('b_', ['x', 'y'], funcs)
-build_b.add_op(Opcode.OP_CAT)
-build_b.add_op(Opcode.OP_4)
-build_b.add_op(Opcode.OP_CAT)
-
-build_a.prove_equivalence(build_b)

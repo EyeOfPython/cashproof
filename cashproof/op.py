@@ -1,28 +1,28 @@
 from abc import ABC, abstractmethod
-from typing import Sequence
+from typing import Sequence, Union
 
 import z3
+from attr import dataclass
 
-from cashproof.func import Funcs, VarNames
+from cashproof.func import Funcs
 from cashproof.opcodes import Opcode
+from cashproof.stack import Stacks, VarNames
+from cashproof.statements import Statements
 
 
-class Stack(ABC):
-    @abstractmethod
-    def pop(self) -> z3.Ast:
-        pass
+@dataclass
+class OpVarNames:
+    inputs: Sequence[str]
+    outputs: Sequence[str]
 
-    @abstractmethod
-    def push(self, var: z3.Ast) -> None:
-        pass
 
-    @abstractmethod
-    def alt_pop(self) -> z3.Ast:
-        pass
+@dataclass
+class OpVars:
+    inputs: Sequence[z3.Ast]
+    outputs: Sequence[z3.Ast]
 
-    @abstractmethod
-    def alt_push(self, var: z3.Ast) -> None:
-        pass
+
+Ast = Union[z3.Ast, bool]
 
 
 class Op(ABC):
@@ -31,5 +31,9 @@ class Op(ABC):
         pass
 
     @abstractmethod
-    def statements_apply(self, stack: Stack, funcs: Funcs, var_names: VarNames) -> Sequence[z3.Ast]:
+    def apply_stack(self, stack: Stacks, var_names: VarNames) -> OpVarNames:
+        pass
+
+    @abstractmethod
+    def statements(self, statements: Statements, op_vars: OpVars, var_names: VarNames, funcs: Funcs) -> None:
         pass

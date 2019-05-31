@@ -1,22 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import Sequence, Callable
+from typing import Sequence, Callable, Dict
 
 import z3
 
+from cashproof.sort import Sort
+from cashproof.stack import VarNames
 
 Func = Callable[..., z3.Ast]
-
-
-class VarNames(ABC):
-    @abstractmethod
-    def new(self, name: str=None) -> str:
-        pass
-
-
-class Sort(ABC):
-    @abstractmethod
-    def to_z3(self) -> z3.Ast:
-        pass
 
 
 class FuncProperty(ABC):
@@ -29,10 +19,37 @@ class Funcs(ABC):
     @abstractmethod
     def define(self,
                name: str,
+               var_names: VarNames,
                input_sorts: Sequence[Sort],
                output_sort: Sort,
                properties: Sequence[FuncProperty]) -> Func:
         pass
+
+    @abstractmethod
+    def statements(self) -> Sequence[z3.Ast]:
+        pass
+
+
+class FuncsDefault(Funcs):
+    def __init__(self) -> None:
+        self._funcs: Dict[str, z3.Function] = {}
+        self._statements = []
+
+    def define(self,
+               name: str,
+               var_names: VarNames,
+               input_sorts: Sequence[Sort],
+               output_sort: Sort,
+               properties: Sequence[FuncProperty]) -> Func:
+        if name in self._funcs:
+            return self._funcs[name]
+        func = z3.Function(name, *list(input_sorts) + [output_sort])
+        self._funcs[name] = func
+        for prop in properties:
+            self._statements.append(prop.to_statement(func, var_names, input_sorts))
+
+    def statements(self) -> Sequence[z3.Ast]:
+        return self._statements
 
 
 class Assoc(FuncProperty):

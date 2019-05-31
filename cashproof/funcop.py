@@ -4,8 +4,10 @@ from typing import Sequence, Union
 import z3
 
 from cashproof.func import Sort, Funcs, FuncProperty, VarNames
-from cashproof.op import Op, Stack
+from cashproof.op import Op, OpVars, Ast, OpVarNames
 from cashproof.opcodes import Opcode
+from cashproof.stack import Stacks
+from cashproof.statements import Statements
 
 
 class FuncOp(ABC):
@@ -18,7 +20,7 @@ class FuncOp(ABC):
         pass
 
     @abstractmethod
-    def statements(self, inputs: Sequence[z3.Ast], outputs: Sequence[z3.Ast], funcs: Funcs) -> Sequence[z3.Ast]:
+    def statements(self, statements: Statements, op_vars: OpVars, var_names: VarNames, funcs: Funcs) -> None:
         pass
 
 
@@ -30,32 +32,20 @@ class OpFuncOp(Op):
     def opcode(self) -> Opcode:
         return self._opcode
 
-    def statements_apply(self, stack: Stack, funcs: Funcs, var_names: VarNames) -> Sequence[z3.Ast]:
+    def apply_stack(self, stack: Stacks, var_names: VarNames) -> OpVarNames:
         inputs = []
         outputs = []
-        for _ in self._func_op.input_sorts():
-            inputs.append(stack.pop())
+        for input_sort in self._func_op.input_sorts():
+            inputs.append(stack.pop(input_sort))
         for output_sort in self._func_op.output_sorts():
-            outputs.append(z3.Const(var_names.new(), output_sort))
-        return self._func_op.statements(inputs, outputs, funcs)
+            outputs.append(stack.push(var_names.new(), output_sort))
+        return OpVarNames(inputs, outputs)
+
+    def statements(self, statements: Statements, op_vars: OpVars, var_names: VarNames, funcs: Funcs) -> None:
+        self._func_op.statements(statements, op_vars, var_names, funcs)
 
 
-class SortInt(Sort):
-    def to_z3(self) -> z3.Ast:
-        return z3.IntSort()
-
-
-class SortBool(Sort):
-    def to_z3(self) -> z3.Ast:
-        return z3.BoolSort()
-
-
-class SortArray(Sort):
-    def to_z3(self) -> z3.Ast:
-        return z3.IntSort()
-
-
-class FuncOpBinary(FuncOp):
+class FuncOpNAry(FuncOp):
     def __init__(self,
                  func_name: Union[str, Sequence[str]],
                  input_sorts: Sequence[Sort],
@@ -72,10 +62,8 @@ class FuncOpBinary(FuncOp):
     def output_sorts(self) -> Sequence[Sort]:
         return self._output_sorts
 
-    def statements(self, inputs: Sequence[z3.Ast], outputs: Sequence[z3.Ast], funcs: Funcs) -> Sequence[z3.Ast]:
+    def statements(self, statements: Statements, op_vars: OpVars, var_names: VarNames, funcs: Funcs) -> None:
         func_names = [self._func_name] if isinstance(self._func_name, str) else [self._func_name]
-        statements = []
-        for func_name, sort, outputs in zip(func_names, self._output_sorts, outputs):
-            func = funcs.define(self._func_name, self._input_sorts, sort, self._func_properties)
-            statements.append(outputs == func(*inputs))
-        return statements
+        for func_name, sort, outputs in zip(func_names, self._output_sorts, op_vars.outputs):
+            func = funcs.define(self._func_name, var_names, self._input_sorts, sort, self._func_properties)
+            statements.assume(outputs == func(*op_vars.inputs))
