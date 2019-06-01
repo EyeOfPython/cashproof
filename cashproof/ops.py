@@ -85,7 +85,6 @@ def parse_script(script: Sequence[ScriptItem]) -> Sequence[Op]:
         else:
             ops.append(parse_script_item(script_item))
         prev_item = script_item
-    print(ops)
     return ops
 
 
