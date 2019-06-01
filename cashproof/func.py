@@ -43,10 +43,11 @@ class FuncsDefault(Funcs):
                properties: Sequence[FuncProperty]) -> Func:
         if name in self._funcs:
             return self._funcs[name]
-        func = z3.Function(name, *list(input_sorts) + [output_sort])
+        func = z3.Function(name, *[input_sort.to_z3() for input_sort in input_sorts] + [output_sort.to_z3()])
         self._funcs[name] = func
         for prop in properties:
             self._statements.append(prop.to_statement(func, var_names, input_sorts))
+        return func
 
     def statements(self) -> Sequence[z3.Ast]:
         return self._statements

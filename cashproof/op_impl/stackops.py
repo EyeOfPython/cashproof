@@ -12,7 +12,7 @@ from cashproof.statements import Statements
 
 class StackOp(ABC):
     @abstractmethod
-    def apply(self, stack: Stacks, var_names: VarNames) -> None:
+    def apply(self, stack: Stacks, var_names: VarNames) -> OpVarNames:
         pass
 
 
@@ -21,7 +21,7 @@ class StackOpMask(StackOp):
         self._n_in = n_in
         self._mask = mask
 
-    def apply(self, stack: Stacks, var_names: VarNames) -> None:
+    def apply(self, stack: Stacks, var_names: VarNames) -> OpVarNames:
         inputs = []
         outputs = []
         for _ in range(self._n_in):
@@ -29,16 +29,19 @@ class StackOpMask(StackOp):
         for i in self._mask:
             outputs.append(inputs[i])
             stack.push(inputs[i], None)
+        return OpVarNames(list(reversed(inputs)), outputs)
 
 
 class StackOpToAltStack(StackOp):
-    def apply(self, stack: Stacks, var_names: VarNames) -> None:
-        stack.alt().push(stack.pop(None), None)
+    def apply(self, stack: Stacks, var_names: VarNames) -> OpVarNames:
+        top = stack.pop(None)
+        stack.alt().push(top, None)
+        return OpVarNames([top], [])
 
 
 class StackOpFromAltStack(StackOp):
-    def apply(self, stack: Stacks, var_names: VarNames) -> None:
-        stack.push(stack.alt().pop(None), None)
+    def apply(self, stack: Stacks, var_names: VarNames) -> OpVarNames:
+        return OpVarNames([], [stack.push(stack.alt().pop(None), None)])
 
 
 class OpStackOp(Op):
@@ -50,11 +53,32 @@ class OpStackOp(Op):
         return self._opcode
 
     def apply_stack(self, stack: Stacks, var_names: VarNames) -> OpVarNames:
-        self._stack_op.apply(stack, var_names)
-        return OpVarNames([], [])
+        return self._stack_op.apply(stack, var_names)
 
     def statements(self, statements: Statements, op_vars: OpVars, var_names: VarNames, funcs: Funcs) -> None:
         pass
+
+
+class OpPick(Op):
+    def __init__(self, idx: int) -> None:
+        self._idx = idx
+
+    def opcode(self) -> Opcode:
+        return Opcode.OP_PICK
+
+    def apply_stack(self, stack: Stacks, var_names: VarNames) -> OpVarNames:
+        inputs = [stack.pop(None) for _ in range(self._idx + 1)]
+        inputs_rev = list(reversed(inputs))
+        outputs = inputs_rev + [inputs_rev[0]]
+        for output in outputs:
+            stack.push(output, None)
+        return OpVarNames(inputs_rev, outputs)
+
+    def statements(self, statements: Statements, op_vars: OpVars, var_names: VarNames, funcs: Funcs) -> None:
+        pass
+
+    def __repr__(self) -> str:
+        return f'OpPick({self._idx})'
 
 
 STACK_OPS = [
@@ -66,7 +90,7 @@ STACK_OPS = [
     OpStackOp(Opcode.OP_SWAP,  StackOpMask(2, [0, 1])),
     OpStackOp(Opcode.OP_TUCK,  StackOpMask(2, [0, 1, 0])),
     OpStackOp(Opcode.OP_2DROP, StackOpMask(2, [])),
-    OpStackOp(Opcode.OP_2DUP,  StackOpMask(1, [1, 0, 1, 0])),
+    OpStackOp(Opcode.OP_2DUP,  StackOpMask(2, [1, 0, 1, 0])),
     OpStackOp(Opcode.OP_3DUP,  StackOpMask(3, [2, 1, 0, 2, 1, 0])),
     OpStackOp(Opcode.OP_2OVER, StackOpMask(4, [3, 2, 1, 0, 3, 2])),
     OpStackOp(Opcode.OP_2ROT,  StackOpMask(6, [3, 2, 1, 0, 5, 4])),

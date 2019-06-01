@@ -15,6 +15,7 @@ class OpEqual(Op):
         b = stack.pop(None)
         a = stack.pop(None)
         equality = stack.push(var_names.new(f'({a}=={b})'), SortBool())
+        stack.add_equality(a, b)
         return OpVarNames([a, b], [equality])
 
     def statements(self, statements: Statements, op_vars: OpVars, var_names: VarNames, funcs: Funcs) -> None:

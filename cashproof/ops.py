@@ -1,19 +1,19 @@
 from dataclasses import dataclass
-from typing import Sequence, Union, Iterable, List, Tuple
+from typing import Sequence, Union, Tuple, Optional
 
 import z3
 
 from cashproof.func import Funcs, FuncsDefault
-from cashproof.op import Op, OpVars, OpVarNames, Ast
+from cashproof.op import Op, OpVars
 from cashproof.op_impl.bitlogicops import BIT_LOGIC_OPS
 from cashproof.op_impl.controlops import CONTROL_OPS
-from cashproof.op_impl.cryptoops import CRYPTO_OPS
+from cashproof.op_impl.cryptoops import CRYPTO_OPS, OpCheckMultiSig
 from cashproof.op_impl.numericops import NUMERIC_OPS
 from cashproof.op_impl.pushops import OpPushInt, OpPushString, OpPushBool
 from cashproof.op_impl.spliceops import SPLICE_OPS
-from cashproof.op_impl.stackops import STACK_OPS
+from cashproof.op_impl.stackops import STACK_OPS, OpPick
 from cashproof.opcodes import Opcode
-from cashproof.sort import Sort, SortUnknown, SortBool
+from cashproof.sort import Sort, SortUnknown
 from cashproof.stack import Stacks, StackStrict, VarNamesIdentity, VarNames, VarNamesPrefix
 from cashproof.statements import StatementsDefault, Statements
 
@@ -42,8 +42,19 @@ class TransformedOps:
     outputs: Sequence[z3.Ast]
 
 
+def parse_int_op(opcode: Opcode) -> Optional[int]:
+    if Opcode.OP_0 == opcode:
+        return 0
+    if Opcode.OP_1.value <= opcode.value <= Opcode.OP_16.value:
+        return opcode.value - Opcode.OP_1.value + 1
+    return None
+
+
 def parse_script_item(script_item: ScriptItem) -> Op:
     if isinstance(script_item, Opcode):
+        parsed_int = parse_int_op(script_item)
+        if parsed_int is not None:
+            return OpPushInt(..., parsed_int)
         return OPS[script_item]
     elif isinstance(script_item, bool):
         return OpPushBool(..., script_item)
@@ -53,6 +64,29 @@ def parse_script_item(script_item: ScriptItem) -> Op:
         return OpPushString(..., script_item)
     else:
         raise ValueError(f'Unknown script item: {script_item}')
+
+
+def parse_script(script: Sequence[ScriptItem]) -> Sequence[Op]:
+    ops = []
+    prev_item: int = None
+    for script_item in script:
+        if script_item == Opcode.OP_PICK:
+            if isinstance(prev_item, Opcode):
+                prev_item = parse_int_op(prev_item)
+            assert isinstance(prev_item, int)
+            ops.pop()
+            ops.append(OpPick(prev_item))
+        elif script_item in {Opcode.OP_CHECKMULTISIG, Opcode.OP_CHECKMULTISIGVERIFY}:
+            if isinstance(prev_item, Opcode):
+                prev_item = parse_int_op(prev_item)
+            assert isinstance(prev_item, int)
+            ops.pop()
+            ops.append(OpCheckMultiSig(prev_item, script_item, script_item == Opcode.OP_CHECKMULTISIGVERIFY))
+        else:
+            ops.append(parse_script_item(script_item))
+        prev_item = script_item
+    print(ops)
+    return ops
 
 
 # def conditional_outputs(transformed_ops: List[TransformedOps]):
@@ -87,10 +121,13 @@ def prove_equivalence(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[ScriptI
     statements1 = StatementsDefault()
     statements2 = StatementsDefault()
 
-    t1 = transform_ops([parse_script_item(op) for op in opcodes1],
+    t1 = transform_ops(parse_script(opcodes1),
                        statements1, input_vars, VarNamesPrefix('a_', input_vars), funcs)
-    t2 = transform_ops([parse_script_item(op) for op in opcodes2],
+    t2 = transform_ops(parse_script(opcodes2),
                        statements2, input_vars, VarNamesPrefix('b_', input_vars), funcs)
+
+    assert t1.expected_input_names == t2.expected_input_names, f'{t1.expected_input_names} == {t2.expected_input_names}'
+    assert t1.expected_input_sorts == t2.expected_input_sorts
 
     assumptions = z3.And(
         *list(statements1.assumed_statements()) + list(statements2.assumed_statements()) + list(funcs.statements())
@@ -216,6 +253,6 @@ def transform_ops(ops: Sequence[Op], statements: Statements, input_vars: VarName
         conditions=[],
         expected_inputs=[vars_z3[var] for var in stack.input_var_names()],
         expected_input_names=stack.input_var_names(),
-        expected_input_sorts=[sorts[var] for var in stack.input_var_names()],
+        expected_input_sorts=[sorts.get(var, unknown) for var in stack.input_var_names()],
         outputs=[vars_z3[var] for var in stack.output_var_names()],
     )

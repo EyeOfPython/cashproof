@@ -27,7 +27,7 @@ class OpGeneric(Op):
         for input_sort in self._input_sorts:
             input_names.append(stack.pop(input_sort))
         result = stack.push(var_names.new(), self._output_sorts)
-        return OpVarNames(input_names, [result])
+        return OpVarNames(list(reversed(input_names)), [result])
 
     def statements(self, statements: Statements, op_vars: OpVars, var_names: VarNames, funcs: Funcs) -> None:
         result, = op_vars.outputs
