@@ -19,6 +19,7 @@ optimizations = [
      [Opcode.OP_3DUP]),
     ([3, Opcode.OP_PICK, 3, Opcode.OP_PICK],         [Opcode.OP_2OVER]),
     ([Opcode.OP_DROP, Opcode.OP_DROP],               [Opcode.OP_2DROP]),
+    ([2, Opcode.OP_ROLL],                            [Opcode.OP_ROT]),
 ]
 
 for i in range(10):

@@ -123,7 +123,7 @@ class StackStrict(Stack):
                 if not self._equalities:
                     return self._var_sorts
                 else:
-                    print(f'Note: could not solve all sorts: {self._equalities}')
+                    # print(f'Note: could not solve all sorts: {self._equalities}')
                     return self._var_sorts
             for a in intersection:
                 equals = self._equalities[a]

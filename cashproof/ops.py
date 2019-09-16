@@ -114,7 +114,7 @@ def parse_script(script: Sequence[ScriptItem]) -> Sequence[Op]:
 #     print(output_conds)
 
 
-def prove_equivalence(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[ScriptItem], verify=True):
+def prove_equivalence(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[ScriptItem], verify=True) -> Optional[str]:
     input_vars = VarNamesIdentity()
     funcs = FuncsDefault()
     statements1 = StatementsDefault()
@@ -136,13 +136,24 @@ def prove_equivalence(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[ScriptI
         verify_problem = z3.And(*[a == b for a, b in zip(statements1.verify_statements(),
                                                          statements2.verify_statements())])
         problem = z3.And(problem, verify_problem)
-    z3.prove(z3.Implies(assumptions, problem))
+    claim = z3.Implies(assumptions, problem)
 
-    print('-----------'*4)
-    print('assuming', assumptions)
-    print('holds', problem)
+    solver = z3.Solver()
+    solver.add(z3.Not(claim))
+    r = solver.check()
+    if r == z3.unsat:
+        return None
+    if r == z3.unknown:
+        s = 'unknown'
+    else:
+        s = 'counterexample'
+    s += '\n-----------------------\nmodel:\n' + str(solver.model())
+    s += '\n-----------------------\nassumptions:\n' + str(assumptions)
+    s += '\n-----------------------\nproblem:\n' + str(problem)
+    s += '\n-----------------------\nsorts:\n'
     for input_name, input_sort in zip(t1.expected_input_names, t1.expected_input_sorts):
-        print(input_name, ':', input_sort)
+        s += f'{input_name} : {input_sort}\n'
+    return s
 
 
 # def recurse_script(script_items: Sequence[ScriptItem],
