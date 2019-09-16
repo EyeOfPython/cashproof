@@ -81,6 +81,28 @@ class OpPick(Op):
         return f'OpPick({self._idx})'
 
 
+class OpRoll(Op):
+    def __init__(self, idx: int) -> None:
+        self._idx = idx
+
+    def opcode(self) -> Opcode:
+        return Opcode.OP_ROLL
+
+    def apply_stack(self, stack: Stacks, var_names: VarNames) -> OpVarNames:
+        inputs = [stack.pop(None) for _ in range(self._idx + 1)]
+        inputs_rev = list(reversed(inputs))
+        outputs = inputs_rev[1:] + [inputs_rev[0]]
+        for output in outputs:
+            stack.push(output, None)
+        return OpVarNames(inputs_rev, outputs)
+
+    def statements(self, statements: Statements, op_vars: OpVars, var_names: VarNames, funcs: Funcs) -> None:
+        pass
+
+    def __repr__(self) -> str:
+        return f'OpRoll({self._idx})'
+
+
 STACK_OPS = [
     OpStackOp(Opcode.OP_DROP,  StackOpMask(1, [])),
     OpStackOp(Opcode.OP_DUP,   StackOpMask(1, [0, 0])),

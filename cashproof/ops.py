@@ -11,7 +11,7 @@ from cashproof.op_impl.cryptoops import CRYPTO_OPS, OpCheckMultiSig
 from cashproof.op_impl.numericops import NUMERIC_OPS
 from cashproof.op_impl.pushops import OpPushInt, OpPushString, OpPushBool
 from cashproof.op_impl.spliceops import SPLICE_OPS
-from cashproof.op_impl.stackops import STACK_OPS, OpPick
+from cashproof.op_impl.stackops import STACK_OPS, OpPick, OpRoll
 from cashproof.opcodes import Opcode
 from cashproof.sort import Sort, SortUnknown
 from cashproof.stack import Stacks, StackStrict, VarNamesIdentity, VarNames, VarNamesPrefix
@@ -70,12 +70,12 @@ def parse_script(script: Sequence[ScriptItem]) -> Sequence[Op]:
     ops = []
     prev_item: int = None
     for script_item in script:
-        if script_item == Opcode.OP_PICK:
+        if script_item == Opcode.OP_PICK or script_item == Opcode.OP_ROLL:
             if isinstance(prev_item, Opcode):
                 prev_item = parse_int_op(prev_item)
             assert isinstance(prev_item, int)
             ops.pop()
-            ops.append(OpPick(prev_item))
+            ops.append(OpPick(prev_item) if script_item == Opcode.OP_PICK else OpRoll(prev_item))
         elif script_item in {Opcode.OP_CHECKMULTISIG, Opcode.OP_CHECKMULTISIGVERIFY}:
             if isinstance(prev_item, Opcode):
                 prev_item = parse_int_op(prev_item)
