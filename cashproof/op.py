@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Sequence, Union
 
 import z3
-from attr import dataclass
+from dataclasses import dataclass
 
 from cashproof.func import Funcs
 from cashproof.opcodes import Opcode
