@@ -9,9 +9,9 @@ def main():
     src = open(filename, 'r').read()
     equivalences = parse_equiv(src)
     for equivalence in equivalences:
-        left, right = equivalence
+        left, right = equivalence.sides
         result = prove_equivalence(left, right)
-        if result is None:
+        if (result is None and not equivalence.inverted) or (result is not None and equivalence.inverted):
             print(end='.')
         else:
             print()
