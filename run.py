@@ -14,10 +14,14 @@ def main():
         if result is None:
             print(end='.')
         else:
+            print()
             print('Equivalence FAILED:')
             print('Tried to prove:')
-            print(left, '<=>', right)
+            print(' '.join(op.name if hasattr(op, 'name') else str(op) for op in left),
+                  '<=>',
+                  ' '.join(op.name if hasattr(op, 'name') else str(op) for op in right))
             print(result)
+    print()
 
 
 if __name__ == '__main__':
