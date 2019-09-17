@@ -1,5 +1,7 @@
+from ast import literal_eval
 from dataclasses import dataclass
 from typing import Sequence, Union, Tuple, Optional
+from io import StringIO
 
 import z3
 
@@ -88,6 +90,42 @@ def parse_script(script: Sequence[ScriptItem]) -> Sequence[Op]:
     return ops
 
 
+def pretty_print_script(script: Sequence) -> str:
+    strs = []
+    for item in script:
+        if isinstance(item, Opcode):
+            strs.append(item.name)
+        elif isinstance(item, (int, z3.BitVecNumRef)):
+            strs.append(str(item))
+        elif isinstance(item, (bool, z3.BoolRef)):
+            item_str = str(item)
+            if item_str == 'True':
+                strs.append('OP_TRUE')
+            else:
+                strs.append('OP_FALSE')
+        elif isinstance(item, str):
+            if item.isprintable():
+                strs.append(repr(item))
+            else:
+                strs.append(f'0x{item.encode().hex()}')
+        elif isinstance(item, (bytes, z3.SeqRef)):
+            if isinstance(item, z3.SeqRef):
+                seq_str = item.as_string().replace("'", r"\'")
+                item = literal_eval(f"b'{seq_str}'")
+            try:
+                s = item.decode()
+            except:
+                pass
+            else:
+                if s.isprintable():
+                    strs.append(repr(s))
+                    continue
+            strs.append(f'0x{item.hex()}')
+        else:
+            strs.append(str(item))
+    return ' '.join(strs)
+
+
 # def conditional_outputs(transformed_ops: List[TransformedOps]):
 #     def to_ast(cond_dict):
 #         stmts = []
@@ -167,17 +205,38 @@ def prove_equivalence(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[ScriptI
     r = solver.check()
     if r == z3.unsat:
         return None
+    s = StringIO()
     if r == z3.unknown:
-        s = 'unknown'
+        print('Equivalence is UNKNOWN.', file=s)
+        print('Z3 is unable to determine whether the scripts are equivalent.', file=s)
     else:
-        s = 'counterexample'
+        print('Equivalence is FALSE, and CashProof can prove it mathematically.', file=s)
+        print('Left script:', file=s)
+        print(end='A:     ', file=s)
+        print(pretty_print_script(opcodes1), file=s)
+        print('Right script:', file=s)
+        print(end='B:     ', file=s)
+        print(pretty_print_script(opcodes2), file=s)
+        print('CashProof found a COUNTEREXAMPLE:', file=s)
+        print('Consider the following inputs:', file=s)
+        print(end='I      ', file=s)
+        print(pretty_print_script([solver.model().get_interp(input_var) for input_var in t1.expected_inputs]), file=s)
+        print('The two script produce different outputs:', file=s)
+        print(end='A(I) = ', file=s)
+        print(pretty_print_script([solver.model().get_interp(output_var) for output_var in t1.outputs]), file=s)
+        print(end='B(I) = ', file=s)
+        print(pretty_print_script([solver.model().get_interp(output_var) for output_var in t2.outputs]), file=s)
+
+    """for input_var in t2.outputs:
+        interp =
+        print(input_var, '=', interp, type(interp), repr(interp), dir(interp))
     s += '\n-----------------------\nmodel:\n' + str(solver.model())
     s += '\n-----------------------\nassumptions:\n' + str(assumptions)
     s += '\n-----------------------\nproblem:\n' + str(problem)
     s += '\n-----------------------\nsorts:\n'
     for input_name, input_sort in zip(t1.expected_input_names, t1.expected_input_sorts):
-        s += f'{input_name} : {input_sort}\n'
-    return s
+        s += f'{input_name} : {input_sort}\n'"""
+    return s.getvalue()
 
 
 # def recurse_script(script_items: Sequence[ScriptItem],
