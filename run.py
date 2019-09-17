@@ -1,4 +1,4 @@
-from cashproof.ops import prove_equivalence
+from cashproof.ops import prove_equivalence, pretty_print_script
 from cashproof.parse_equiv_file import parse_equiv
 
 import sys
@@ -17,9 +17,7 @@ def main():
             print()
             print('Equivalence FAILED:')
             print('Tried to prove:')
-            print(' '.join(op.name if hasattr(op, 'name') else str(op) for op in left),
-                  '<=>',
-                  ' '.join(op.name if hasattr(op, 'name') else str(op) for op in right))
+            print(pretty_print_script(left), '<=>', pretty_print_script(right))
             print(result)
     print()
 
