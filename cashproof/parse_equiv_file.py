@@ -1,3 +1,4 @@
+from ast import literal_eval
 from dataclasses import dataclass
 
 from cashproof.opcodes import Opcode
@@ -43,7 +44,9 @@ def parse_equiv(src: str):
                 elif op.startswith('0x'):
                     ops.append(bytes.fromhex(op[2:]))
                 elif op[:1] == '"' and op[-1:] == '"':
-                    ops.append(op[1:-1])
+                    ops.append(literal_eval(op))
+                elif op[:1] == "'" and op[-1:] == "'":
+                    ops.append(literal_eval(op))
                 else:
                     ops.append(Opcode[op])
             parsed_sides.append(ops)
