@@ -114,6 +114,22 @@ def parse_script(script: Sequence[ScriptItem]) -> Sequence[Op]:
 #     print(output_conds)
 
 
+def clean_nop(t: TransformedOps) -> TransformedOps:
+    n_nops = 0
+    for expected_input, output in zip(reversed(t.expected_inputs), t.outputs):
+        if expected_input is not output:
+            break
+        n_nops += 1
+    input_slice = slice(None) if not n_nops else slice(None, -n_nops)
+    return TransformedOps(
+        conditions=t.conditions,
+        expected_inputs=t.expected_inputs[input_slice],
+        expected_input_names=t.expected_input_names[input_slice],
+        expected_input_sorts=t.expected_input_sorts[input_slice],
+        outputs=t.outputs[n_nops:],
+    )
+
+
 def prove_equivalence(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[ScriptItem], verify=True) -> Optional[str]:
     input_vars = VarNamesIdentity()
     funcs = FuncsDefault()
@@ -125,8 +141,15 @@ def prove_equivalence(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[ScriptI
     t2 = transform_ops(parse_script(opcodes2),
                        statements2, input_vars, VarNamesPrefix('b_', input_vars), funcs)
 
-    assert t1.expected_input_names == t2.expected_input_names, f'{t1.expected_input_names} == {t2.expected_input_names}'
-    assert t1.expected_input_sorts == t2.expected_input_sorts
+    t1 = clean_nop(t1)
+    t2 = clean_nop(t2)
+
+    if t1.expected_input_names != t2.expected_input_names:
+        return f'differing inputs: {t1.expected_input_names} ≠ {t2.expected_input_names}'
+    if t1.expected_input_sorts != t2.expected_input_sorts:
+        return f'differing input sorts: {t1.expected_input_sorts} ≠ {t2.expected_input_sorts}'
+    if len(t1.outputs) != len(t2.outputs):
+        return f'differing number of outputs: len({t1.outputs}) ≠ len({t2.outputs})'
 
     assumptions = z3.And(
         *list(statements1.assumed_statements()) + list(statements2.assumed_statements()) + list(funcs.statements())
