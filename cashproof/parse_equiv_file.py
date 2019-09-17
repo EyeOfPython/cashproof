@@ -1,4 +1,15 @@
+from dataclasses import dataclass
+
 from cashproof.opcodes import Opcode
+import re
+
+reg_num = re.compile('^-?\d+$')
+
+
+@dataclass
+class Equivalence:
+    inverted: bool
+    sides: list
 
 
 def parse_equiv(src: str):
@@ -9,7 +20,16 @@ def parse_equiv(src: str):
     for equivalence in equivalences:
         if not equivalence.strip():
             continue
-        sides = equivalence.split('<=>')
+        if '<=>' in equivalence:
+            sides = equivalence.split('<=>')
+            inverted = False
+        elif '<!=>' in equivalence:
+            sides = equivalence.split('<!=>')
+            inverted = True
+        else:
+            print('invalid equivalence:', equivalence)
+            quit()
+            return
         sides = [[op for op in side.split()] for side in sides]
         parsed_sides = []
         for side in sides:
@@ -18,13 +38,15 @@ def parse_equiv(src: str):
                 op = op.strip()
                 if not op:
                     continue
-                if op.isdigit():
+                if reg_num.match(op) is not None:
                     ops.append(int(op))
+                elif op.startswith('0x'):
+                    ops.append(bytes.fromhex(op[2:]))
                 elif op[:1] == '"' and op[-1:] == '"':
                     ops.append(op[1:-1])
                 else:
                     ops.append(Opcode[op])
             parsed_sides.append(ops)
         if parsed_sides:
-            parsed_equivalences.append(parsed_sides)
+            parsed_equivalences.append(Equivalence(inverted=inverted, sides=parsed_sides))
     return parsed_equivalences
