@@ -146,7 +146,8 @@ def prove_equivalence(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[ScriptI
 
     if t1.expected_input_names != t2.expected_input_names:
         return f'differing inputs: {t1.expected_input_names} ≠ {t2.expected_input_names}'
-    if t1.expected_input_sorts != t2.expected_input_sorts:
+    if any(s1 != s2 and s1 != SortUnknown() and s2 != SortUnknown()
+           for s1, s2 in zip(t1.expected_input_sorts, t2.expected_input_sorts)):
         return f'differing input sorts: {t1.expected_input_sorts} ≠ {t2.expected_input_sorts}'
     if len(t1.outputs) != len(t2.outputs):
         return f'differing number of outputs: len({t1.outputs}) ≠ len({t2.outputs})'
