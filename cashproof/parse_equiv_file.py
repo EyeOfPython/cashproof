@@ -7,6 +7,8 @@ def parse_equiv(src: str):
     equivalences = src.split(';')
     parsed_equivalences = []
     for equivalence in equivalences:
+        if not equivalence.strip():
+            continue
         sides = equivalence.split('<=>')
         sides = [[op for op in side.split()] for side in sides]
         parsed_sides = []
@@ -22,8 +24,7 @@ def parse_equiv(src: str):
                     ops.append(op[1:-1])
                 else:
                     ops.append(Opcode[op])
-            if ops:
-                parsed_sides.append(ops)
+            parsed_sides.append(ops)
         if parsed_sides:
             parsed_equivalences.append(parsed_sides)
     return parsed_equivalences
