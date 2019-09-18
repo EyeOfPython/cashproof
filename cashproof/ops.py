@@ -51,6 +51,8 @@ class TransformedOps:
 
 
 def parse_int_op(opcode: Opcode) -> Optional[int]:
+    if Opcode.OP_1NEGATE == opcode:
+        return -1
     if Opcode.OP_0 == opcode:
         return 0
     if Opcode.OP_1.value <= opcode.value <= Opcode.OP_16.value:
