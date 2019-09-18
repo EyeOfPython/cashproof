@@ -169,11 +169,12 @@ def clean_nop(t: TransformedOps) -> TransformedOps:
     )
 
 
-def prove_equivalence(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[ScriptItem], verify=True) -> Optional[str]:
+def prove_equivalence(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[ScriptItem],
+                      max_stackitem_size, verify=True) -> Optional[str]:
     input_vars = VarNamesIdentity()
     funcs = FuncsDefault()
-    statements1 = StatementsDefault()
-    statements2 = StatementsDefault()
+    statements1 = StatementsDefault(max_stackitem_size)
+    statements2 = StatementsDefault(max_stackitem_size)
 
     t1 = transform_ops(parse_script(opcodes1),
                        statements1, input_vars, VarNamesPrefix('a_', input_vars), funcs)
@@ -207,6 +208,7 @@ def prove_equivalence(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[ScriptI
     if r == z3.unsat:
         return None
     s = StringIO()
+    needs_verbose = False
     if r == z3.unknown:
         print('Equivalence is UNKNOWN.', file=s)
         print('Z3 is unable to determine whether the scripts are equivalent.', file=s)
@@ -220,23 +222,36 @@ def prove_equivalence(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[ScriptI
         print(pretty_print_script(opcodes2), file=s)
         print('CashProof found a COUNTEREXAMPLE:', file=s)
         print('Consider the following inputs:', file=s)
-        print(end='I      ', file=s)
+        print(end='I:     ', file=s)
         print(pretty_print_script([solver.model().get_interp(input_var) for input_var in t1.expected_inputs]), file=s)
-        print('The two script produce different outputs:', file=s)
+        output1 = pretty_print_script([solver.model().get_interp(output_var) for output_var in t1.outputs])
+        output2 = pretty_print_script([solver.model().get_interp(output_var) for output_var in t2.outputs])
+        if output1 == output2:
+            print('While the scripts produce the same output:', file=s)
+        else:
+            print('The two scripts produce different outputs:', file=s)
         print(end='A(I) = ', file=s)
-        print(pretty_print_script([solver.model().get_interp(output_var) for output_var in t1.outputs]), file=s)
+        print(output1, file=s)
         print(end='B(I) = ', file=s)
-        print(pretty_print_script([solver.model().get_interp(output_var) for output_var in t2.outputs]), file=s)
+        print(output2, file=s)
 
-    """for input_var in t2.outputs:
-        interp =
-        print(input_var, '=', interp, type(interp), repr(interp), dir(interp))
-    s += '\n-----------------------\nmodel:\n' + str(solver.model())
-    s += '\n-----------------------\nassumptions:\n' + str(assumptions)
-    s += '\n-----------------------\nproblem:\n' + str(problem)
-    s += '\n-----------------------\nsorts:\n'
-    for input_name, input_sort in zip(t1.expected_input_names, t1.expected_input_sorts):
-        s += f'{input_name} : {input_sort}\n'"""
+        if output1 == output2:
+            print('Other invariants, such as OP_VERIFY differ.', file=s)
+            print('Invariants can be introduced by OP_VERIFY, OP_EQUALVERIFY, OP_NUMEQUALVERIFY, OP_CHECKSIGVERIFY, \n'
+                  'OP_CHECKMULTISIGVERIFY, OP_CHECKLOCKTIMEVERIFY, OP_CHECKSEQUENCEVERIFY and OP_CHECKDATASIGVERIFY.',
+                  file=s)
+        if needs_verbose:
+            print('-'*20, file=s)
+            print('model:\n', solver.model(), file=s)
+    if needs_verbose:
+        print('-'*20, file=s)
+        print('assumptions:\n', assumptions, file=s)
+        print('-'*20, file=s)
+        print('problem:\n', problem, file=s)
+        print('-'*20, file=s)
+        print('sorts:', file=s)
+        for input_name, input_sort in zip(t1.expected_input_names, t1.expected_input_sorts):
+            print(input_name, ' : ', input_sort, file=s)
     return s.getvalue()
 
 
@@ -338,6 +353,7 @@ def transform_ops(ops: Sequence[Op], statements: Statements, input_vars: VarName
             OpVars(
                 [vars_z3[input_name] for input_name in op_var_names.inputs],
                 [vars_z3[output_name] for output_name in op_var_names.outputs],
+                op_var_names.data,
             )
         )
     for op, op_vars in zip(ops, op_vars_list):
