@@ -56,16 +56,16 @@ class FuncsDefault(Funcs):
 class Assoc(FuncProperty):
     def to_statement(self, func: Func, var_names: VarNames, input_sorts: Sequence[Sort]) -> z3.Ast:
         sort1, sort2 = input_sorts
-        a = z3.Const(var_names.new('a'), sort1)
-        b = z3.Const(var_names.new('b'), sort1)
-        c = z3.Const(var_names.new('c'), sort2)
+        a = z3.Const(var_names.new('a'), sort1.to_z3())
+        b = z3.Const(var_names.new('b'), sort1.to_z3())
+        c = z3.Const(var_names.new('c'), sort2.to_z3())
         return z3.ForAll((a, b, c), func(func(a, b), c) == func(a, func(b, c)))
 
 
 class Commut(FuncProperty):
     def to_statement(self, func: Func, var_names: VarNames, input_sorts: Sequence[Sort]) -> z3.Ast:
         sort1, sort2 = input_sorts
-        a = z3.Const(var_names.new('a'), sort1)
-        b = z3.Const(var_names.new('b'), sort1)
-        c = z3.Const(var_names.new('c'), sort2)
+        a = z3.Const(var_names.new('a'), sort1.to_z3())
+        b = z3.Const(var_names.new('b'), sort1.to_z3())
+        c = z3.Const(var_names.new('c'), sort2.to_z3())
         return z3.ForAll((a, b, c), func(func(a, b), c) == func(a, func(b, c)))
