@@ -6,6 +6,7 @@ import z3
 from cashproof.func import Funcs
 from cashproof.op import Op, OpVarNames, OpVars
 from cashproof.opcodes import Opcode
+from cashproof.sort import SortInt
 from cashproof.stack import Stacks, VarNames
 from cashproof.statements import Statements
 
@@ -103,6 +104,19 @@ class OpRoll(Op):
         return f'OpRoll({self._idx})'
 
 
+class OpDepth(Op):
+    def opcode(self) -> Opcode:
+        return Opcode.OP_DEPTH
+
+    def apply_stack(self, stack: Stacks, var_names: VarNames) -> OpVarNames:
+        depth = stack.push(var_names.new(), SortInt())
+        return OpVarNames([], [depth], stack.depth())
+
+    def statements(self, statements: Statements, op_vars: OpVars, var_names: VarNames, funcs: Funcs) -> None:
+        depth, = op_vars.outputs
+        statements.assume(depth == op_vars.data)
+
+
 STACK_OPS = [
     OpStackOp(Opcode.OP_DROP,  StackOpMask(1, [])),
     OpStackOp(Opcode.OP_DUP,   StackOpMask(1, [0, 0])),
@@ -119,4 +133,5 @@ STACK_OPS = [
     OpStackOp(Opcode.OP_2SWAP, StackOpMask(4, [1, 0, 3, 2])),
     OpStackOp(Opcode.OP_TOALTSTACK, StackOpToAltStack()),
     OpStackOp(Opcode.OP_FROMALTSTACK, StackOpFromAltStack()),
+    OpDepth(),
 ]
