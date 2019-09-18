@@ -57,41 +57,41 @@ def _add_num_encode_assumptions(statements: Statements, num, abs_num, string, la
     statements.assume(z3.Implies(z3.Length(string) == 1, z3.And(
         string == z3.Unit(z3.Concat(sign_bit, z3.Extract(6, 0, abs_num))),
         abs_num <= 127,
-        )))
+    )))
     statements.assume(
         z3.Implies(z3.Length(string) == 2, z3.And(
-            z3.SubString(string, 0, 1) == z3.Unit(z3.Extract(7, 0, abs_num)),
-            z3.SubString(string, 1, 1) == z3.Unit(z3.Concat(sign_bit, z3.Extract(14, 8, abs_num))),
+            string[0] == z3.Unit(z3.Extract(7, 0, abs_num)),
+            string[1] == z3.Unit(z3.Concat(sign_bit, z3.Extract(14, 8, abs_num))),
             abs_num <= 32767,
-            ))
+        ))
     )
     statements.assume(
         z3.Implies(z3.Length(string) == 3, z3.And(
-            z3.SubString(string, 0, 1) == z3.Unit(z3.Extract(7, 0, abs_num)),
-            z3.SubString(string, 1, 1) == z3.Unit(z3.Extract(15, 8, abs_num)),
-            z3.SubString(string, 2, 1) == z3.Unit(z3.Concat(sign_bit, z3.Extract(22, 16, abs_num))),
+            string[0] == z3.Unit(z3.Extract(7, 0, abs_num)),
+            string[1] == z3.Unit(z3.Extract(15, 8, abs_num)),
+            string[2] == z3.Unit(z3.Concat(sign_bit, z3.Extract(22, 16, abs_num))),
             abs_num <= 8388607,
-            ))
+        ))
     )
     statements.assume(
         z3.Implies(z3.Length(string) == 4, z3.And(
-            z3.SubString(string, 0, 1) == z3.Unit(z3.Extract(7, 0, abs_num)),
-            z3.SubString(string, 1, 1) == z3.Unit(z3.Extract(15, 8, abs_num)),
-            z3.SubString(string, 2, 1) == z3.Unit(z3.Extract(23, 16, abs_num)),
-            z3.SubString(string, 3, 1) == z3.Unit(z3.Concat(sign_bit, z3.Extract(30, 24, abs_num))),
+            string[0] == z3.Unit(z3.Extract(7, 0, abs_num)),
+            string[1] == z3.Unit(z3.Extract(15, 8, abs_num)),
+            string[2] == z3.Unit(z3.Extract(23, 16, abs_num)),
+            string[3] == z3.Unit(z3.Concat(sign_bit, z3.Extract(30, 24, abs_num))),
             abs_num <= 2147483647,
-            ))
+        ))
     )
     statements.assume(
         z3.Implies(z3.Length(string) > 4, z3.And(
-            z3.SubString(string, 0, 1) == z3.Unit(z3.Extract(7, 0, abs_num)),
-            z3.SubString(string, 1, 1) == z3.Unit(z3.Extract(15, 8, abs_num)),
-            z3.SubString(string, 2, 1) == z3.Unit(z3.Extract(23, 16, abs_num)),
-            z3.SubString(string, 3, 1) == z3.Unit(z3.Concat(zero_bit, z3.Extract(30, 24, abs_num))),
+            string[0] == z3.Unit(z3.Extract(7, 0, abs_num)),
+            string[1] == z3.Unit(z3.Extract(15, 8, abs_num)),
+            string[2] == z3.Unit(z3.Extract(23, 16, abs_num)),
+            string[3] == z3.Unit(z3.Concat(zero_bit, z3.Extract(30, 24, abs_num))),
             z3.InRe(z3.SubString(string, 4, z3.Length(string) - 5), z3.Star(z3.Re('\0'))),
             last_byte == z3.Concat(sign_bit, z3.BitVecVal(0, 7)),
             abs_num <= 2147483647,
-            ))
+        ))
     )
 
 
