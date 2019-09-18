@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Sequence, Union
+from typing import Sequence, Union, Any
 
 import z3
 from dataclasses import dataclass
@@ -14,12 +14,14 @@ from cashproof.statements import Statements
 class OpVarNames:
     inputs: Sequence[str]
     outputs: Sequence[str]
+    data: Any = None
 
 
 @dataclass
 class OpVars:
     inputs: Sequence[z3.Ast]
     outputs: Sequence[z3.Ast]
+    data: Any
 
 
 Ast = Union[z3.Ast, bool]
