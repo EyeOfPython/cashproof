@@ -48,6 +48,7 @@ class TransformedOps:
     expected_input_names: Sequence[str]
     expected_input_sorts: Sequence[Sort]
     outputs: Sequence[z3.Ast]
+    output_sorts: Sequence[Sort]
 
 
 def parse_int_op(opcode: Opcode) -> Optional[int]:
@@ -183,7 +184,33 @@ def clean_nop(t: TransformedOps) -> TransformedOps:
         expected_input_names=t.expected_input_names[input_slice],
         expected_input_sorts=t.expected_input_sorts[input_slice],
         outputs=t.outputs[n_nops:],
+        output_sorts=t.output_sorts[n_nops:],
     )
+
+
+def check_sorts(msg: str, sorts1: Sequence[Sort], sorts2: Sequence[Sort],
+                opcodes1: Sequence[ScriptItem], opcodes2: Sequence[ScriptItem]):
+    s = StringIO()
+    if any(s1 != s2 and s1 != SortUnknown() and s2 != SortUnknown()
+           for s1, s2 in zip(sorts1, sorts2)):
+        print('Equivalence is FALSE.', msg, file=s)
+        print('Left script:', file=s)
+        print(end='A:     ', file=s)
+        print(pretty_print_script(opcodes1), file=s)
+        print('Right script:', file=s)
+        print(end='B:     ', file=s)
+        print(pretty_print_script(opcodes2), file=s)
+        print(file=s)
+        print('     |   Left   |   Right', file=s)
+        print('----------------+-----------', file=s)
+        for i, (s1, s2) in enumerate(zip(sorts1, sorts2)):
+            if s1 != s2 and s1 != SortUnknown() and s2 != SortUnknown():
+                print(end='=> ', file=s)
+            else:
+                print(end='   ', file=s)
+            print('{} |{:^10}|{:^10}'.format(i, s1.to_c(), s2.to_c()), file=s)
+        return s.getvalue()
+    return None
 
 
 def prove_equivalence_single(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[ScriptItem],
@@ -201,13 +228,38 @@ def prove_equivalence_single(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[
     t1 = clean_nop(t1)
     t2 = clean_nop(t2)
 
-    if t1.expected_input_names != t2.expected_input_names:
-        return f'differing inputs: {t1.expected_input_names} ≠ {t2.expected_input_names}'
-    if any(s1 != s2 and s1 != SortUnknown() and s2 != SortUnknown()
-           for s1, s2 in zip(t1.expected_input_sorts, t2.expected_input_sorts)):
-        return f'differing input sorts: {t1.expected_input_sorts} ≠ {t2.expected_input_sorts}'
+    s = StringIO()
+
     if len(t1.outputs) != len(t2.outputs):
-        return f'differing number of outputs: len({t1.outputs}) ≠ len({t2.outputs})'
+        print('Equivalence is FALSE. The two scripts produce a different number of outputs.', file=s)
+        print('Left script:', file=s)
+        print(end='A:     ', file=s)
+        print(pretty_print_script(opcodes1), file=s)
+        print('Right script:', file=s)
+        print(end='B:     ', file=s)
+        print(pretty_print_script(opcodes2), file=s)
+        print(f'The left script produces {len(t1.outputs)} outputs, '
+              f'while the right script produces {len(t2.outputs)}', file=s)
+        return s.getvalue()
+    if len(t1.expected_input_names) != len(t2.expected_input_names):
+        print('Equivalence is FALSE. The two scripts take a different number of inputs.', file=s)
+        print('Left script:', file=s)
+        print(end='A:     ', file=s)
+        print(pretty_print_script(opcodes1), file=s)
+        print('Right script:', file=s)
+        print(end='B:     ', file=s)
+        print(pretty_print_script(opcodes2), file=s)
+        print(f'The left script takes {len(t1.expected_input_names)} inputs, '
+              f'while the right script takes {len(t2.expected_input_names)}', file=s)
+        return s.getvalue()
+    result_sorts = check_sorts('The two scripts take different datatypes as inputs.',
+                               t1.expected_input_sorts, t2.expected_input_sorts, opcodes1, opcodes2)
+    if result_sorts is not None:
+        return result_sorts
+    result_sorts = check_sorts('The two script produce different datatypes as outputs.',
+                               t1.output_sorts, t2.output_sorts, opcodes1, opcodes2)
+    if result_sorts is not None:
+        return result_sorts
 
     assumptions = z3.And(
         *list(statements1.assumed_statements()) + list(statements2.assumed_statements()) + list(funcs.statements())
@@ -224,7 +276,6 @@ def prove_equivalence_single(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[
     r = solver.check()
     if r == z3.unsat:
         return None
-    s = StringIO()
     needs_verbose = False
     if r == z3.unknown:
         print('Equivalence is UNKNOWN.', file=s)
@@ -382,4 +433,5 @@ def transform_ops(ops: Sequence[Op], statements: Statements, input_vars: VarName
         expected_input_names=stack.input_var_names(),
         expected_input_sorts=[sorts.get(var, unknown) for var in stack.input_var_names()],
         outputs=[vars_z3[var] for var in stack.output_var_names()],
+        output_sorts=[sorts.get(var, unknown) for var in stack.output_var_names()],
     )

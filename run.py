@@ -21,6 +21,7 @@ def main():
             print('Equivalence FAILED:')
             print('Tried to prove:')
             print(pretty_print_script(left), '<=>', pretty_print_script(right))
+            print('-'*80)
             print(result)
     print()
 
