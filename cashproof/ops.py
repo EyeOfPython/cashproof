@@ -145,32 +145,6 @@ def pretty_print_script(script: Sequence) -> str:
     return ' '.join(strs)
 
 
-# def conditional_outputs(transformed_ops: List[TransformedOps]):
-#     def to_ast(cond_dict):
-#         stmts = []
-#         stmt = cond_dict.pop('expect', None)
-#         if stmt is not None:
-#             return stmt
-#         for cond_var_name, next_cond_dict in cond_dict.items():
-#             cond_var = z3.Bool(cond_var_name)
-#             stmts.append(z3.If(cond_var, to_ast(next_cond_dict['then']), to_ast(next_cond_dict['otherwise'])))
-#         return z3.And(*stmts)
-#
-#     outputs = {}
-#     for t in transformed_ops:
-#         for i, output in enumerate(t.outputs):
-#             cond = outputs.setdefault(i, {})
-#             for var_name, holds in t.conditions:
-#                 cond = cond.setdefault(var_name, {}).setdefault('then' if holds else 'otherwise', {})
-#             cond['expect'] = output
-#     output_conds = {
-#         i: to_ast(cond_dict)
-#         for i, cond_dict in outputs.items()
-#     }
-#
-#     print(output_conds)
-
-
 def clean_nop(t: TransformedOps) -> TransformedOps:
     n_nops = 0
     for expected_input, output in zip(reversed(t.expected_inputs), t.outputs):
@@ -321,82 +295,6 @@ def prove_equivalence_single(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[
         for input_name, input_sort in zip(t1.expected_input_names, t1.expected_input_sorts):
             print(input_name, ' : ', input_sort, file=s)
     return s.getvalue()
-
-
-# def recurse_script(script_items: Sequence[ScriptItem],
-#                    ops: Sequence[Op],
-#                    op_var_names: Sequence[OpVarNames],
-#                    condition_stack: List[Tuple[str, bool]],
-#                    stack: Stacks,
-#                    var_names: VarNames,
-#                    statements: Statements,
-#                    funcs: Funcs):
-#     new_ops = list(ops)
-#     new_op_var_names = list(op_var_names)
-#     for script_item in script_items:
-#         if isinstance(script_item, If):
-#             condition_var = stack.pop(SortBool())
-#             condition = z3.Const(condition_var, SortBool().to_z3())
-#             stack_copy = stack.copy()
-#             new_op_var_names.append(OpVarNames([condition_var], []))
-#             new_ops.append(None)
-#
-#             statements.begin_if(condition)
-#             yield from recurse_script(
-#                 script_items=script_item.then,
-#                 ops=new_ops,
-#                 op_var_names=new_op_var_names,
-#                 condition_stack=condition_stack + [(condition_var, True)],
-#                 stack=stack,
-#                 var_names=VarNamesPrefix(f'{condition_var}_true_', var_names),
-#                 statements=statements,
-#                 funcs=funcs,
-#             )
-#             statements.begin_else()
-#             yield from recurse_script(
-#                 script_items=script_item.otherwise,
-#                 ops=new_ops,
-#                 op_var_names=new_op_var_names,
-#                 condition_stack=condition_stack + [(condition_var, False)],
-#                 stack=stack_copy,
-#                 var_names=VarNamesPrefix(f'{condition_var}_false_', var_names),
-#                 statements=statements,
-#                 funcs=funcs,
-#             )
-#             statements.end_if()
-#         else:
-#             op = parse_script_item(script_item)
-#             new_ops.append(op)
-#             op_var_names_instance = op.apply_stack(stack, var_names)
-#             new_op_var_names.append(op_var_names_instance)
-#     sorts = stack.solve_all()
-#     print(sorts, new_op_var_names)
-#     vars_z3 = {}
-#     unknown = SortUnknown()
-#     for op_var_names in new_op_var_names:
-#         for var_name in list(op_var_names.inputs) + list(op_var_names.outputs):
-#             if var_name not in vars_z3:
-#                 vars_z3[var_name] = z3.Const(var_name, sorts.get(var_name, unknown).to_z3())
-#     op_vars_list = []
-#     for op_var_names in new_op_var_names:
-#         op_vars_list.append(
-#             OpVars(
-#                 [vars_z3[input_name] for input_name in op_var_names.inputs],
-#                 [vars_z3[output_name] for output_name in op_var_names.outputs],
-#             )
-#         )
-#     for op, op_vars in zip(new_ops, op_vars_list):
-#         if op is None:
-#             continue
-#         op.statements(statements, op_vars, var_names, funcs)
-#
-#     yield TransformedOps(
-#         conditions=condition_stack,
-#         expected_inputs=[vars_z3[var] for var in stack.input_var_names()],
-#         expected_input_names=stack.input_var_names(),
-#         expected_input_sorts=[sorts[var] for var in stack.input_var_names()],
-#         outputs=[vars_z3[var] for var in stack.output_var_names()],
-#     )
 
 
 def transform_ops(ops: Sequence[Op], statements: Statements, input_vars: VarNames, stack_vars: VarNames, funcs: Funcs):

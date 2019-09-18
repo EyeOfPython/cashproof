@@ -36,7 +36,7 @@ class OpNopVerify(Op):
         in_val, = op_vars.inputs
         out_val, = op_vars.outputs
         statements.assume(in_val == out_val)
-        verify = funcs.define(f'{self._opcode.name}_FUNC', var_names, [SortInt()], SortBool(), [])
+        verify = funcs.define(f'{self._opcode.name}_FUNC', var_names, [SortInt()], SortBool())
         statements.verify(verify(in_val))
 
 

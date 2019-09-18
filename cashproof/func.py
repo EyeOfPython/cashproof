@@ -9,20 +9,13 @@ from cashproof.stack import VarNames
 Func = Callable[..., z3.Ast]
 
 
-class FuncProperty(ABC):
-    @abstractmethod
-    def to_statement(self, func: z3.Ast, var_names: VarNames, input_sorts: Sequence[Sort]) -> z3.Ast:
-        pass
-
-
 class Funcs(ABC):
     @abstractmethod
     def define(self,
                name: str,
                var_names: VarNames,
                input_sorts: Sequence[Sort],
-               output_sort: Sort,
-               properties: Sequence[FuncProperty]) -> Func:
+               output_sort: Sort) -> Func:
         pass
 
     @abstractmethod
@@ -39,33 +32,12 @@ class FuncsDefault(Funcs):
                name: str,
                var_names: VarNames,
                input_sorts: Sequence[Sort],
-               output_sort: Sort,
-               properties: Sequence[FuncProperty]) -> Func:
+               output_sort: Sort) -> Func:
         if name in self._funcs:
             return self._funcs[name]
         func = z3.Function(name, *[input_sort.to_z3() for input_sort in input_sorts] + [output_sort.to_z3()])
         self._funcs[name] = func
-        for prop in properties:
-            self._statements.append(prop.to_statement(func, var_names, input_sorts))
         return func
 
     def statements(self) -> Sequence[z3.Ast]:
         return self._statements
-
-
-class Assoc(FuncProperty):
-    def to_statement(self, func: Func, var_names: VarNames, input_sorts: Sequence[Sort]) -> z3.Ast:
-        sort1, sort2 = input_sorts
-        a = z3.Const(var_names.new('a'), sort1.to_z3())
-        b = z3.Const(var_names.new('b'), sort1.to_z3())
-        c = z3.Const(var_names.new('c'), sort2.to_z3())
-        return z3.ForAll((a, b, c), func(func(a, b), c) == func(a, func(b, c)))
-
-
-class Commut(FuncProperty):
-    def to_statement(self, func: Func, var_names: VarNames, input_sorts: Sequence[Sort]) -> z3.Ast:
-        sort1, sort2 = input_sorts
-        a = z3.Const(var_names.new('a'), sort1.to_z3())
-        b = z3.Const(var_names.new('b'), sort1.to_z3())
-        c = z3.Const(var_names.new('c'), sort2.to_z3())
-        return z3.ForAll((a, b, c), func(func(a, b), c) == func(a, func(b, c)))

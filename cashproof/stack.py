@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Set
 
-import z3
-
 from cashproof.sort import Sort
 
 
@@ -120,11 +118,7 @@ class StackStrict(Stack):
         while True:
             intersection = self._equalities.keys() & self._var_sorts.keys()
             if not intersection:
-                if not self._equalities:
-                    return self._var_sorts
-                else:
-                    # print(f'Note: could not solve all sorts: {self._equalities}')
-                    return self._var_sorts
+                return self._var_sorts
             for a in intersection:
                 equals = self._equalities[a]
                 sort = self._var_sorts[a]
@@ -192,7 +186,7 @@ def test_stack():
     d = stack.pop(None)
     stack.push(d, SortInt())
     stack.add_sort_equality(a, b)
-    #stack.add_equality(b, c)
+    stack.add_sort_equality(b, c)
     stack.add_sort_equality(c, d)
     stack.solve_all()
     print(stack._var_sorts)

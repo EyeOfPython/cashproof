@@ -11,11 +11,11 @@ from cashproof.statements import Statements
 
 
 def secp256k1_verify(var_names: VarNames, funcs: Funcs) -> Callable[..., Ast]:
-    return funcs.define('SECP256k1_VERIFY', var_names, [SortString(), SortString(), SortString()], SortBool(), [])
+    return funcs.define('SECP256k1_VERIFY', var_names, [SortString(), SortString(), SortString()], SortBool())
 
 
 def sha256(var_names: VarNames, funcs: Funcs) -> Callable[..., Ast]:
-    return funcs.define('SHA256', var_names, [SortString()], SortString(), [])
+    return funcs.define('SHA256', var_names, [SortString()], SortString())
 
 
 class OpCheckSig(Op):
@@ -127,7 +127,7 @@ class OpHash(Op):
         data, = op_vars.inputs
         hashed, = op_vars.outputs
         for hash_func in reversed(self._hash_funcs):
-            func = funcs.define(hash_func, var_names, [SortString()], SortString(), [])
+            func = funcs.define(hash_func, var_names, [SortString()], SortString())
             data = func(data)
         statements.assume(data == hashed)
 

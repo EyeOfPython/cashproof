@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Sequence
 
-import z3
-
 from cashproof.func import Funcs
 from cashproof.op import Op, OpVarNames, OpVars
 from cashproof.opcodes import Opcode

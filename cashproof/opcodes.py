@@ -4,7 +4,7 @@ from enum import Enum
 class Opcode(Enum):
     OP_0 = 0x00
     OP_FALSE = OP_0
-    OP_PUSHDATA1 = 0x4c
+    # OP_PUSHDATA1 = 0x4c
     # OP_PUSHDATA2 = 0x4d
     # OP_PUSHDATA4 = 0x4e
     OP_1NEGATE = 0x4f

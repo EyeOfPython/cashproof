@@ -1,13 +1,8 @@
-from typing import Sequence, Callable
-
 import z3
 
-from cashproof.func import Funcs
-from cashproof.op import Op, OpVars, Ast, OpVarNames
 from cashproof.op_impl.generic import OpGeneric, OpGenericVerify
 from cashproof.opcodes import Opcode
-from cashproof.sort import SortInt, Sort, SortBool
-from cashproof.stack import VarNames, Stacks
+from cashproof.sort import SortInt, SortBool
 
 
 NUMERIC_OPS = [
