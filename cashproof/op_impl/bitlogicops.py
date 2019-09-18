@@ -1,10 +1,13 @@
-from cashproof.func import Funcs, Assoc, Commut
-from cashproof.funcop import OpFuncOp, FuncOpNAry
+from typing import Callable
+
+from cashproof.func import Funcs
 from cashproof.op import Op, OpVars, OpVarNames
 from cashproof.opcodes import Opcode
 from cashproof.sort import SortString, SortBool
 from cashproof.stack import Stacks, VarNames
 from cashproof.statements import Statements
+
+import z3
 
 
 class OpEqual(Op):
@@ -15,7 +18,7 @@ class OpEqual(Op):
         b = stack.pop(None)
         a = stack.pop(None)
         equality = stack.push(var_names.new(f'({a}=={b})'), SortBool())
-        stack.add_equality(a, b)
+        stack.add_sort_equality(a, b)
         return OpVarNames([a, b], [equality])
 
     def statements(self, statements: Statements, op_vars: OpVars, var_names: VarNames, funcs: Funcs) -> None:
@@ -31,7 +34,7 @@ class OpEqualVerify(Op):
     def apply_stack(self, stack: Stacks, var_names: VarNames) -> OpVarNames:
         b = stack.pop(None)
         a = stack.pop(None)
-        stack.add_equality(a, b)
+        stack.add_sort_equality(a, b)
         return OpVarNames([a, b], [])
 
     def statements(self, statements: Statements, op_vars: OpVars, var_names: VarNames, funcs: Funcs) -> None:
@@ -39,10 +42,42 @@ class OpEqualVerify(Op):
         statements.verify(a == b)
 
 
+class OpBitLogic(Op):
+    def __init__(self, opcode: Opcode, func: Callable) -> None:
+        self._opcode = opcode
+        self._func = func
+
+    def opcode(self) -> Opcode:
+        return self._opcode
+
+    def apply_stack(self, stack: Stacks, var_names: VarNames) -> OpVarNames:
+        b = stack.pop(SortString())
+        a = stack.pop(SortString())
+        result = stack.push(var_names.new(f'bitop({a},{b})'), SortString())
+        return OpVarNames([a, b], [result])
+
+    def statements(self, statements: Statements, op_vars: OpVars, var_names: VarNames, funcs: Funcs) -> None:
+        a, b = op_vars.inputs
+        result, = op_vars.outputs
+        statements.assume(z3.Length(result) == z3.Length(b))
+        statements.assume(z3.Length(result) == z3.Length(a))
+        for i in range(0, statements.max_stackitem_size()):
+            a_i = z3.BitVec(var_names.new(f'bitop_a{i}({a},{b})'), 8)
+            b_i = z3.BitVec(var_names.new(f'bitop_b{i}({a},{b})'), 8)
+            statements.assume(z3.Implies(
+                i < z3.Length(result),
+                z3.And(
+                    result[i] == z3.Unit(self._func(a_i, b_i)),
+                    a[i] == z3.Unit(a_i),
+                    b[i] == z3.Unit(b_i),
+                ),
+            ))
+
+
 BIT_LOGIC_OPS = [
-    OpFuncOp(Opcode.OP_AND, FuncOpNAry('AND', [SortString(), SortString()], SortString(), [Assoc(), Commut()])),
-    OpFuncOp(Opcode.OP_OR,  FuncOpNAry('OR',  [SortString(), SortString()], SortString(), [Assoc(), Commut()])),
-    OpFuncOp(Opcode.OP_XOR, FuncOpNAry('XOR', [SortString(), SortString()], SortString(), [Assoc(), Commut()])),
+    OpBitLogic(Opcode.OP_AND, lambda a, b: a & b),
+    OpBitLogic(Opcode.OP_OR, lambda a, b: a | b),
+    OpBitLogic(Opcode.OP_XOR, lambda a, b: a ^ b),
     OpEqual(),
     OpEqualVerify(),
 ]
