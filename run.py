@@ -10,7 +10,7 @@ def main():
     equivalences = parse_equiv(src)
     for equivalence in equivalences:
         left, right = equivalence.sides
-        result = prove_equivalence(left, right)
+        result = prove_equivalence(left, right, equivalence.max_stackitem_size)
         if (result is None and not equivalence.inverted) or (result is not None and equivalence.inverted):
             print(end='.')
         else:

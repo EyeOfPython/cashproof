@@ -10,6 +10,7 @@ from cashproof.op import Op, OpVars
 from cashproof.op_impl.bitlogicops import BIT_LOGIC_OPS
 from cashproof.op_impl.controlops import CONTROL_OPS
 from cashproof.op_impl.cryptoops import CRYPTO_OPS, OpCheckMultiSig
+from cashproof.op_impl.nop import NOPS
 from cashproof.op_impl.numericops import NUMERIC_OPS
 from cashproof.op_impl.pushops import OpPushInt, OpPushString, OpPushBool
 from cashproof.op_impl.spliceops import SPLICE_OPS
@@ -21,7 +22,7 @@ from cashproof.statements import StatementsDefault, Statements
 
 OPS = {
     op.opcode(): op
-    for op in STACK_OPS + SPLICE_OPS + CONTROL_OPS + BIT_LOGIC_OPS + NUMERIC_OPS + CRYPTO_OPS
+    for op in STACK_OPS + SPLICE_OPS + CONTROL_OPS + BIT_LOGIC_OPS + NUMERIC_OPS + CRYPTO_OPS + NOPS
 }
 
 
