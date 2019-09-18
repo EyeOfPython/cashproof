@@ -58,7 +58,8 @@ def parse_equiv(src: str):
     parsed_equivalences = []
     max_stackitem_size = 520
     for equivalence in equivalences:
-        if not equivalence.strip():
+        equivalence = equivalence.strip()
+        if not equivalence:
             continue
         if equivalence.startswith('!'):
             if equivalence.startswith('!max_stackitem_size='):
