@@ -30,7 +30,7 @@ class Stack(ABC):
         pass
 
     @abstractmethod
-    def add_equality(self, a: str, b: str) -> None:
+    def add_sort_equality(self, a: str, b: str) -> None:
         pass
 
     @abstractmethod
@@ -70,8 +70,8 @@ class Stacks(Stack):
     def alt(self) -> Stack:
         return self._alt_stack
 
-    def add_equality(self, a: str, b: str) -> None:
-        return self._stack.add_equality(a, b)
+    def add_sort_equality(self, a: str, b: str) -> None:
+        return self._stack.add_sort_equality(a, b)
 
     def copy(self) -> 'Stacks':
         return Stacks(self._stack.copy(), self._alt_stack.copy())
@@ -112,7 +112,7 @@ class StackStrict(Stack):
             raise ValueError(f'Inconsistent sorts for {var_name}: {self._var_sorts[var_name]} != {sort}')
         self._var_sorts[var_name] = sort
 
-    def add_equality(self, a: str, b: str) -> None:
+    def add_sort_equality(self, a: str, b: str) -> None:
         self._equalities.setdefault(a, set()).add(b)
         self._equalities.setdefault(b, set()).add(a)
 
@@ -191,9 +191,9 @@ def test_stack():
     c = stack.pop(None)
     d = stack.pop(None)
     stack.push(d, SortInt())
-    stack.add_equality(a, b)
+    stack.add_sort_equality(a, b)
     #stack.add_equality(b, c)
-    stack.add_equality(c, d)
+    stack.add_sort_equality(c, d)
     stack.solve_all()
     print(stack._var_sorts)
 
