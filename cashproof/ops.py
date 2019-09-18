@@ -61,7 +61,7 @@ def parse_int_op(opcode: Opcode) -> Optional[int]:
     return None
 
 
-def parse_script_item(script_item: ScriptItem) -> Op:
+def parse_script_item(script_item: ScriptItem, max_stackitem_size: int) -> Op:
     if isinstance(script_item, Opcode):
         parsed_int = parse_int_op(script_item)
         if parsed_int is not None:
@@ -72,6 +72,8 @@ def parse_script_item(script_item: ScriptItem) -> Op:
     elif isinstance(script_item, int):
         return OpPushInt(..., script_item)
     elif isinstance(script_item, (str, bytes)):
+        if len(script_item) > max_stackitem_size:
+            raise ValueError(f'Stack item exceeds limit: len({script_item}) > {max_stackitem_size}')
         return OpPushString(..., script_item)
     elif isinstance(script_item, AssumeBool):
         return OpAssumeBool(script_item.top)
@@ -79,7 +81,7 @@ def parse_script_item(script_item: ScriptItem) -> Op:
         raise ValueError(f'Unknown script item: {script_item}')
 
 
-def parse_script(script: Sequence[ScriptItem]) -> Sequence[Op]:
+def parse_script(script: Sequence[ScriptItem], max_stackitem_size: int) -> Sequence[Op]:
     ops = []
     prev_item: int = None
     for script_item in script:
@@ -96,7 +98,7 @@ def parse_script(script: Sequence[ScriptItem]) -> Sequence[Op]:
             ops.pop()
             ops.append(OpCheckMultiSig(prev_item, script_item, script_item == Opcode.OP_CHECKMULTISIGVERIFY))
         else:
-            ops.append(parse_script_item(script_item))
+            ops.append(parse_script_item(script_item, max_stackitem_size))
         prev_item = script_item
     return ops
 
@@ -194,9 +196,9 @@ def prove_equivalence_single(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[
     statements1 = StatementsDefault(max_stackitem_size)
     statements2 = StatementsDefault(max_stackitem_size)
 
-    t1 = transform_ops(parse_script(opcodes1),
+    t1 = transform_ops(parse_script(opcodes1, max_stackitem_size),
                        statements1, input_vars, VarNamesPrefix('a_', input_vars), funcs)
-    t2 = transform_ops(parse_script(opcodes2),
+    t2 = transform_ops(parse_script(opcodes2, max_stackitem_size),
                        statements2, input_vars, VarNamesPrefix('b_', input_vars), funcs)
 
     t1 = clean_nop(t1)

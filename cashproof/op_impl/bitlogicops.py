@@ -61,6 +61,7 @@ class OpBitLogic(Op):
         result, = op_vars.outputs
         statements.assume(z3.Length(result) == z3.Length(b))
         statements.assume(z3.Length(result) == z3.Length(a))
+        statements.assume(z3.Length(result) <= statements.max_stackitem_size())
         for i in range(0, statements.max_stackitem_size()):
             a_i = z3.BitVec(var_names.new(f'bitop_a{i}({a},{b})'), 8)
             b_i = z3.BitVec(var_names.new(f'bitop_b{i}({a},{b})'), 8)

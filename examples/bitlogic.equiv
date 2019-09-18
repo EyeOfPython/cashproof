@@ -1,4 +1,10 @@
+!max_stackitem_size=8;
+OP_AND OP_AND <=> OP_TOALTSTACK OP_AND OP_FROMALTSTACK OP_AND;
+OP_OR OP_OR <=> OP_TOALTSTACK OP_OR OP_FROMALTSTACK OP_OR;
+OP_OR <=> OP_SWAP OP_OR;
+
 !max_stackitem_size=3;
+
 0x03 0x02 OP_AND <=> 0x02;
 0x03 0x02 OP_AND <!=> 0x03;
 0x0303 0x0202 OP_AND <=> 0x0202;
@@ -6,8 +12,6 @@
 0x030303 0x020202 OP_AND <=> 0x020202;
 0x030303 0x020202 OP_AND <!=> 0x030303;
 
-# stackitem size exceeded
-0x03030303 0x02020202 OP_AND <!=> 0x02020202;
 !max_stackitem_size=4;
 0x03030303 0x02020202 OP_AND <=> 0x02020202;
 !max_stackitem_size=3;
