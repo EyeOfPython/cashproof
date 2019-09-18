@@ -7,6 +7,7 @@ import z3
 
 from cashproof.func import Funcs, FuncsDefault
 from cashproof.op import Op, OpVars
+from cashproof.op_impl.assume import OpAssumeBool
 from cashproof.op_impl.bitlogicops import BIT_LOGIC_OPS
 from cashproof.op_impl.controlops import CONTROL_OPS
 from cashproof.op_impl.cryptoops import CRYPTO_OPS, OpCheckMultiSig
@@ -26,14 +27,18 @@ OPS = {
 }
 
 
-ScriptItem = Union[Opcode, int, str, bytes, bool, 'If']
+ScriptItem = Union[Opcode, int, str, bytes, bool, 'If', 'AssumeBool']
 
 
 @dataclass
 class If:
-    # inverted: bool
     then: Sequence[ScriptItem]
     otherwise: Sequence[ScriptItem]
+
+
+@dataclass
+class AssumeBool:
+    top: bool
 
 
 @dataclass
@@ -65,6 +70,8 @@ def parse_script_item(script_item: ScriptItem) -> Op:
         return OpPushInt(..., script_item)
     elif isinstance(script_item, (str, bytes)):
         return OpPushString(..., script_item)
+    elif isinstance(script_item, AssumeBool):
+        return OpAssumeBool(script_item.top)
     else:
         raise ValueError(f'Unknown script item: {script_item}')
 
@@ -79,7 +86,7 @@ def parse_script(script: Sequence[ScriptItem]) -> Sequence[Op]:
             assert isinstance(prev_item, int)
             ops.pop()
             ops.append(OpPick(prev_item) if script_item == Opcode.OP_PICK else OpRoll(prev_item))
-        elif script_item in {Opcode.OP_CHECKMULTISIG, Opcode.OP_CHECKMULTISIGVERIFY}:
+        elif script_item == Opcode.OP_CHECKMULTISIG or script_item == Opcode.OP_CHECKMULTISIGVERIFY:
             if isinstance(prev_item, Opcode):
                 prev_item = parse_int_op(prev_item)
             assert isinstance(prev_item, int)
@@ -122,6 +129,14 @@ def pretty_print_script(script: Sequence) -> str:
                     strs.append(repr(s))
                     continue
             strs.append(f'0x{item.hex()}')
+        elif isinstance(item, If):
+            strs.append('OP_IF')
+            strs.append(pretty_print_script(item.then))
+            strs.append('OP_ELSE')
+            strs.append(pretty_print_script(item.otherwise))
+            strs.append('OP_ENDIF')
+        elif isinstance(item, AssumeBool):
+            strs.append(f'<OP_IF={item.top}>')
         else:
             strs.append(str(item))
     return ' '.join(strs)
@@ -169,8 +184,8 @@ def clean_nop(t: TransformedOps) -> TransformedOps:
     )
 
 
-def prove_equivalence(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[ScriptItem],
-                      max_stackitem_size, verify=True) -> Optional[str]:
+def prove_equivalence_single(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[ScriptItem],
+                             max_stackitem_size, verify=True) -> Optional[str]:
     input_vars = VarNamesIdentity()
     funcs = FuncsDefault()
     statements1 = StatementsDefault(max_stackitem_size)
