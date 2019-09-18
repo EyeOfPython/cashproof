@@ -11,6 +11,7 @@ reg_num = re.compile('^-?\d+$')
 class Equivalence:
     inverted: bool
     sides: list
+    max_stackitem_size: int
 
 
 def parse_equiv(src: str):
@@ -18,9 +19,14 @@ def parse_equiv(src: str):
 
     equivalences = src.split(';')
     parsed_equivalences = []
+    max_stackitem_size = 520
     for equivalence in equivalences:
         if not equivalence.strip():
             continue
+        if equivalence.startswith('!'):
+            if equivalence.startswith('!max_stackitem_size='):
+                max_stackitem_size = int(equivalence[len('!max_stackitem_size='):])
+                continue
         if '<=>' in equivalence:
             sides = equivalence.split('<=>')
             inverted = False
@@ -51,5 +57,7 @@ def parse_equiv(src: str):
                     ops.append(Opcode[op])
             parsed_sides.append(ops)
         if parsed_sides:
-            parsed_equivalences.append(Equivalence(inverted=inverted, sides=parsed_sides))
+            parsed_equivalences.append(Equivalence(inverted=inverted,
+                                                   sides=parsed_sides,
+                                                   max_stackitem_size=max_stackitem_size))
     return parsed_equivalences

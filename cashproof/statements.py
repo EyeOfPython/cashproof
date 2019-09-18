@@ -9,6 +9,10 @@ Ast = Union[z3.Ast, bool]
 
 class Statements(ABC):
     @abstractmethod
+    def max_stackitem_size(self) -> int:
+        pass
+
+    @abstractmethod
     def assume(self, ast: Ast) -> 'Statements':
         pass
 
@@ -51,11 +55,15 @@ class StmtIf:
 
 
 class StatementsDefault(Statements):
-    def __init__(self) -> None:
+    def __init__(self, max_stackitem_size) -> None:
+        self._max_stackitem_size = max_stackitem_size
         self._current_stmts: Stmts = Stmts([], [])
         self._initial_stmts = self._current_stmts
         self._branch_stack: List[StmtIf] = []
         self._branches: List[StmtIf] = []
+
+    def max_stackitem_size(self) -> int:
+        return self._max_stackitem_size
 
     def assume(self, ast: Ast) -> 'Statements':
         self._current_stmts.statements.append(ast)
