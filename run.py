@@ -1,4 +1,5 @@
-from cashproof.ops import prove_equivalence, pretty_print_script
+from cashproof.cases import prove_equivalence_cases
+from cashproof.ops import pretty_print_script
 from cashproof.parse_equiv_file import parse_equiv
 
 import sys
@@ -10,7 +11,7 @@ def main():
     equivalences = parse_equiv(src)
     for equivalence in equivalences:
         left, right = equivalence.sides
-        result = prove_equivalence(left, right, equivalence.max_stackitem_size)
+        result = prove_equivalence_cases(left, right, equivalence.max_stackitem_size)
         if (result is None and not equivalence.inverted) or (result is not None and equivalence.inverted):
             print(end='.')
         else:
