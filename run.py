@@ -6,9 +6,11 @@ import sys
 
 
 def main():
-    filename = sys.argv[1]
-    src = open(filename, 'r').read()
-    equivalences = parse_equiv(src)
+    filenames = sys.argv[1:]
+    equivalences = []
+    for filename in filenames:
+        src = open(filename, 'r').read()
+        equivalences.extend(parse_equiv(src))
     for equivalence in equivalences:
         left, right = equivalence.sides
         result = prove_equivalence_cases(left, right, equivalence.max_stackitem_size)
