@@ -164,6 +164,31 @@ def clean_nop(t: TransformedOps) -> TransformedOps:
     )
 
 
+def reconcile_inout(t1: TransformedOps, t2: TransformedOps) -> Tuple[TransformedOps, TransformedOps]:
+    if len(t1.outputs) - len(t2.outputs) == len(t1.expected_inputs) - len(t2.expected_inputs):
+        if len(t1.outputs) > len(t2.outputs):
+            n = len(t1.outputs) - len(t2.outputs)
+            return t1, TransformedOps(
+                conditions=t2.conditions,
+                expected_inputs=list(t1.expected_inputs[:n]) + list(t2.expected_inputs),
+                expected_input_names=list(t1.expected_input_names[:n]) + list(t2.expected_input_names),
+                expected_input_sorts=list(t1.expected_input_sorts[:n]) + list(t2.expected_input_sorts),
+                outputs=list(t2.outputs) + list(t1.expected_inputs[-n:]),
+                output_sorts=list(t2.output_sorts) + list(t1.expected_input_sorts[-n:]),
+            )
+        if len(t2.outputs) > len(t1.outputs):
+            n = len(t2.outputs) - len(t1.outputs)
+            return TransformedOps(
+                conditions=t1.conditions,
+                expected_inputs=list(t2.expected_inputs[:n]) + list(t1.expected_inputs),
+                expected_input_names=list(t2.expected_input_names[:n]) + list(t1.expected_input_names),
+                expected_input_sorts=list(t2.expected_input_sorts[:n]) + list(t1.expected_input_sorts),
+                outputs=list(t1.outputs) + list(t2.expected_inputs[-n:]),
+                output_sorts=list(t1.output_sorts) + list(t2.expected_input_sorts[-n:]),
+            ), t2
+    return t1, t2
+
+
 def check_sorts(msg: str, sorts1: Sequence[Sort], sorts2: Sequence[Sort],
                 opcodes1: Sequence[ScriptItem], opcodes2: Sequence[ScriptItem]):
     s = StringIO()
@@ -203,6 +228,7 @@ def prove_equivalence_single(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[
 
     t1 = clean_nop(t1)
     t2 = clean_nop(t2)
+    t1, t2 = reconcile_inout(t1, t2)
 
     s = StringIO()
 
