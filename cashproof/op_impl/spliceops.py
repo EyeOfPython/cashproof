@@ -28,16 +28,16 @@ class OpSplit(Op):
         return Opcode.OP_SPLIT
 
     def apply_stack(self, stack: Stacks, var_names: VarNames) -> OpVarNames:
-        string = stack.pop(SortString())
         split_idx = stack.pop(SortInt())
+        string = stack.pop(SortString())
         return OpVarNames(
-            [string, split_idx],
+            [split_idx, string],
             [stack.push(var_names.new(f'[{string},{split_idx}]_1'), SortString()),
              stack.push(var_names.new(f'[{string}_{split_idx}]_2'), SortString())],
         )
 
     def statements(self, statements: Statements, op_vars: OpVars, var_names: VarNames, funcs: Funcs) -> None:
-        string, split_idx = op_vars.inputs
+        split_idx, string = op_vars.inputs
         result1, result2 = op_vars.outputs
         statements.assume(result1 == z3.SubString(string, 0, split_idx))
         statements.assume(result2 == z3.SubString(string, split_idx, z3.Length(string)))
