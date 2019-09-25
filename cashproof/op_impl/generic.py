@@ -1,9 +1,11 @@
 from typing import Sequence, Callable
 
+import z3
+
 from cashproof.func import Funcs
 from cashproof.op import Op, OpVars, Ast, OpVarNames
 from cashproof.opcodes import Opcode
-from cashproof.sort import Sort
+from cashproof.sort import Sort, SortBool
 from cashproof.stack import VarNames, Stacks
 from cashproof.statements import Statements
 
@@ -53,4 +55,6 @@ class OpGenericVerify(Op):
         return OpVarNames(input_names, [])
 
     def statements(self, statements: Statements, op_vars: OpVars, var_names: VarNames, funcs: Funcs) -> None:
-        statements.verify(self._func(*op_vars.inputs))
+        validity = z3.Const(var_names.new(), SortBool().to_z3())
+        statements.assume(validity == self._func(*op_vars.inputs))
+        statements.verify(validity)

@@ -39,7 +39,9 @@ class OpCheckSig(Op):
         hash_func = sha256(var_names, funcs)
         data = hash_func(hash_func(preimage))
         if self._verify:
-            statements.verify(verify_func(sig, data, pubkey))
+            validity = z3.Const(var_names.new(), SortBool().to_z3())
+            statements.assume(validity == verify_func(sig, data, pubkey))
+            statements.verify(validity)
         else:
             result, = op_vars.outputs
             statements.assume(result == verify_func(sig, data, pubkey))
@@ -64,6 +66,7 @@ class OpCheckMultiSig(Op):
         return OpVarNames([dummy] + list(reversed(signatures)) + list(reversed(publickeys)), results)
 
     def statements(self, statements: Statements, op_vars: OpVars, var_names: VarNames, funcs: Funcs) -> None:
+        raise NotImplemented('OP_CHECKMULTISIG is currently implemented incorrectly')
         _, *inputs = op_vars.inputs
         signatures = inputs[:len(inputs) // 2]
         publickeys = inputs[len(inputs) // 2:]
@@ -72,7 +75,9 @@ class OpCheckMultiSig(Op):
         hash_func = sha256(var_names, funcs)
         data = hash_func(hash_func(preimage))
         if self._verify:
+            validity = z3.Const(var_names.new(), SortBool().to_z3())
             for sig, pubkey in zip(signatures, publickeys):
+                validity
                 statements.verify(verify_func(sig, data, pubkey))
         else:
             result, = op_vars.outputs
@@ -104,7 +109,9 @@ class OpCheckDataSig(Op):
         func = secp256k1_verify(var_names, funcs)
         data = sha256(var_names, funcs)(msg)
         if self._verify:
-            statements.verify(func(sig, data, pubkey))
+            validity = z3.Const(var_names.new(), SortBool().to_z3())
+            statements.assume(validity == func(sig, data, pubkey))
+            statements.verify(validity)
         else:
             result, = op_vars.outputs
             statements.assume(result == func(sig, data, pubkey))

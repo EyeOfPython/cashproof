@@ -39,7 +39,9 @@ class OpEqualVerify(Op):
 
     def statements(self, statements: Statements, op_vars: OpVars, var_names: VarNames, funcs: Funcs) -> None:
         a, b = op_vars.inputs
-        statements.verify(a == b)
+        equality = z3.Const(var_names.new(), SortBool().to_z3())
+        statements.assume((a == b) == equality)
+        statements.verify(equality)
 
 
 class OpBitLogic(Op):

@@ -1,6 +1,6 @@
 from ast import literal_eval
 from dataclasses import dataclass
-from typing import Sequence, Union, Tuple, Optional
+from typing import Sequence, Union, Tuple, Optional, TextIO
 from io import StringIO
 
 import z3
@@ -68,13 +68,13 @@ def parse_script_item(script_item: ScriptItem, max_stackitem_size: int) -> Op:
             return OpPushInt(..., parsed_int)
         return OPS[script_item]
     elif isinstance(script_item, bool):
-        return OpPushBool(..., script_item)
+        return OpPushBool(script_item, script_item)
     elif isinstance(script_item, int):
-        return OpPushInt(..., script_item)
+        return OpPushInt(script_item, script_item)
     elif isinstance(script_item, (str, bytes)):
         if len(script_item) > max_stackitem_size:
             raise ValueError(f'Stack item exceeds limit: len({script_item}) > {max_stackitem_size}')
-        return OpPushString(..., script_item)
+        return OpPushString(script_item, script_item)
     elif isinstance(script_item, AssumeBool):
         return OpAssumeBool(script_item.top)
     else:
@@ -214,6 +214,19 @@ def check_sorts(msg: str, sorts1: Sequence[Sort], sorts2: Sequence[Sort],
     return None
 
 
+def print_verify_state(s: TextIO, opcodes: Sequence[Op], statements: Statements, model: z3.ModelRef):
+    verify_map = {
+        idx: model.get_interp(var)
+        for idx, var in zip(statements.verify_opcode_indices(), statements.verify_statements())
+    }
+    for idx, opcode in enumerate(opcodes):
+        if idx in verify_map:
+            print(end=f'<{pretty_print_script([opcode.opcode()])}={verify_map[idx]}> ', file=s)
+        else:
+            print(pretty_print_script([opcode.opcode()]), end=' ', file=s)
+    print(file=s)
+
+
 def prove_equivalence_single(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[ScriptItem],
                              max_stackitem_size, verify=True, full_script: bool=False) -> Optional[str]:
     input_vars = VarNamesIdentity()
@@ -221,9 +234,12 @@ def prove_equivalence_single(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[
     statements1 = StatementsDefault(max_stackitem_size)
     statements2 = StatementsDefault(max_stackitem_size)
 
-    t1 = transform_ops(parse_script(opcodes1, max_stackitem_size),
+    ops1 = parse_script(opcodes1, max_stackitem_size)
+    ops2 = parse_script(opcodes2, max_stackitem_size)
+
+    t1 = transform_ops(ops1,
                        statements1, input_vars, VarNamesPrefix('a_', input_vars), funcs, full_script)
-    t2 = transform_ops(parse_script(opcodes2, max_stackitem_size),
+    t2 = transform_ops(ops2,
                        statements2, input_vars, VarNamesPrefix('b_', input_vars), funcs, full_script)
 
     if not full_script:
@@ -331,6 +347,10 @@ def prove_equivalence_single(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[
             print('Invariants can be introduced by OP_VERIFY, OP_EQUALVERIFY, OP_NUMEQUALVERIFY, OP_CHECKSIGVERIFY, \n'
                   'OP_CHECKMULTISIGVERIFY, OP_CHECKLOCKTIMEVERIFY, OP_CHECKSEQUENCEVERIFY and OP_CHECKDATASIGVERIFY.',
                   file=s)
+            print('Script A:', file=s)
+            print_verify_state(s, ops1, statements1, solver.model())
+            print('Script B:', file=s)
+            print_verify_state(s, ops2, statements2, solver.model())
         if needs_verbose:
             print('-'*20, file=s)
             print('model:\n', solver.model(), file=s)
@@ -374,7 +394,10 @@ def transform_ops(ops: Sequence[Op], statements: Statements, input_vars: VarName
         )
     for op, op_vars in zip(ops, op_vars_list):
         op.statements(statements, op_vars, stack_vars, funcs)
+        statements.next_opcode()
     if full_script:
+        if stacks.depth() == 0:
+            raise ValueError('No final stack item on stack')
         statements.verify(z3.Const(stacks.pop(SortBool()), SortBool().to_z3()))
 
     return TransformedOps(
