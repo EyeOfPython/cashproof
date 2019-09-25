@@ -15,6 +15,7 @@ class Equivalence:
     inverted: bool
     sides: list
     max_stackitem_size: int
+    full_script: bool
 
 
 def parse_ops(raw_ops: Sequence[str], start: int, depth=0):
@@ -61,6 +62,7 @@ def parse_equiv(src: str):
     equivalences = src.split(';')
     parsed_equivalences = []
     max_stackitem_size = 520
+    full_script = False
     for equivalence in equivalences:
         equivalence = equivalence.strip()
         if not equivalence:
@@ -69,6 +71,9 @@ def parse_equiv(src: str):
             if equivalence.startswith('!max_stackitem_size='):
                 max_stackitem_size = int(equivalence[len('!max_stackitem_size='):])
                 continue
+            if equivalence.startswith('!full_script='):
+                full_script = literal_eval(equivalence[len('!full_script='):])
+            continue
         if '<=>' in equivalence:
             sides = equivalence.split('<=>')
             inverted = False
@@ -87,5 +92,6 @@ def parse_equiv(src: str):
         if parsed_sides:
             parsed_equivalences.append(Equivalence(inverted=inverted,
                                                    sides=parsed_sides,
-                                                   max_stackitem_size=max_stackitem_size))
+                                                   max_stackitem_size=max_stackitem_size,
+                                                   full_script=full_script))
     return parsed_equivalences

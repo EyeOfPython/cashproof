@@ -17,7 +17,7 @@ from cashproof.op_impl.pushops import OpPushInt, OpPushString, OpPushBool
 from cashproof.op_impl.spliceops import SPLICE_OPS
 from cashproof.op_impl.stackops import STACK_OPS, OpPick, OpRoll
 from cashproof.opcodes import Opcode
-from cashproof.sort import Sort, SortUnknown
+from cashproof.sort import Sort, SortUnknown, SortBool
 from cashproof.stack import Stacks, StackStrict, VarNamesIdentity, VarNames, VarNamesPrefix
 from cashproof.statements import StatementsDefault, Statements
 
@@ -215,16 +215,16 @@ def check_sorts(msg: str, sorts1: Sequence[Sort], sorts2: Sequence[Sort],
 
 
 def prove_equivalence_single(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[ScriptItem],
-                             max_stackitem_size, verify=True) -> Optional[str]:
+                             max_stackitem_size, verify=True, full_script: bool=False) -> Optional[str]:
     input_vars = VarNamesIdentity()
     funcs = FuncsDefault()
     statements1 = StatementsDefault(max_stackitem_size)
     statements2 = StatementsDefault(max_stackitem_size)
 
     t1 = transform_ops(parse_script(opcodes1, max_stackitem_size),
-                       statements1, input_vars, VarNamesPrefix('a_', input_vars), funcs)
+                       statements1, input_vars, VarNamesPrefix('a_', input_vars), funcs, full_script)
     t2 = transform_ops(parse_script(opcodes2, max_stackitem_size),
-                       statements2, input_vars, VarNamesPrefix('b_', input_vars), funcs)
+                       statements2, input_vars, VarNamesPrefix('b_', input_vars), funcs, full_script)
 
     t1 = clean_nop(t1)
     t2 = clean_nop(t2)
@@ -326,7 +326,8 @@ def prove_equivalence_single(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[
     return s.getvalue()
 
 
-def transform_ops(ops: Sequence[Op], statements: Statements, input_vars: VarNames, stack_vars: VarNames, funcs: Funcs):
+def transform_ops(ops: Sequence[Op], statements: Statements, input_vars: VarNames, stack_vars: VarNames, funcs: Funcs,
+                  full_script: bool):
     stack = StackStrict(input_vars)
     altstack = StackStrict(input_vars)
     stacks = Stacks(stack, altstack)
@@ -353,6 +354,8 @@ def transform_ops(ops: Sequence[Op], statements: Statements, input_vars: VarName
         )
     for op, op_vars in zip(ops, op_vars_list):
         op.statements(statements, op_vars, stack_vars, funcs)
+    if full_script:
+        statements.verify(z3.Const(stacks.pop(SortBool()), SortBool().to_z3()))
 
     return TransformedOps(
         conditions=[],

@@ -29,7 +29,7 @@ def split_cases(ops: Sequence[ScriptItem], cases: List[Case]):
 
 
 def prove_equivalence_cases(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[ScriptItem],
-                            max_stackitem_size) -> Optional[str]:
+                            max_stackitem_size, full_script: bool) -> Optional[str]:
     cases1 = split_cases(opcodes1, [Case([], [])])
     cases2 = split_cases(opcodes2, [Case([], [])])
     s = StringIO()
@@ -48,7 +48,7 @@ def prove_equivalence_cases(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[S
                       file=s)
             return s.getvalue()
     for case1, case2 in zip(cases1, cases2):
-        result = prove_equivalence_single(case1.ops, case2.ops, max_stackitem_size)
+        result = prove_equivalence_single(case1.ops, case2.ops, max_stackitem_size, full_script=full_script)
         if result is not None:
             return result
     return None

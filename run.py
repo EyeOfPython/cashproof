@@ -13,7 +13,7 @@ def main():
         equivalences.extend(parse_equiv(src))
     for equivalence in equivalences:
         left, right = equivalence.sides
-        result = prove_equivalence_cases(left, right, equivalence.max_stackitem_size)
+        result = prove_equivalence_cases(left, right, equivalence.max_stackitem_size, equivalence.full_script)
         if (result is None and not equivalence.inverted) or (result is not None and equivalence.inverted):
             print(end='.')
         else:
