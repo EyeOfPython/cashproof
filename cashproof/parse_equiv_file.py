@@ -46,6 +46,10 @@ def parse_ops(raw_ops: Sequence[str], start: int, depth=0):
             ops.append(literal_eval(op))
         elif op[:1] == "'" and op[-1:] == "'":
             ops.append(literal_eval(op))
+        elif op == 'OP_TRUE':
+            ops.append(True)
+        elif op == 'OP_FALSE':
+            ops.append(False)
         else:
             ops.append(Opcode[op])
     return ops, None
