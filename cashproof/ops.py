@@ -226,11 +226,34 @@ def prove_equivalence_single(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[
     t2 = transform_ops(parse_script(opcodes2, max_stackitem_size),
                        statements2, input_vars, VarNamesPrefix('b_', input_vars), funcs, full_script)
 
-    t1 = clean_nop(t1)
-    t2 = clean_nop(t2)
-    t1, t2 = reconcile_inout(t1, t2)
+    if not full_script:
+        t1 = clean_nop(t1)
+        t2 = clean_nop(t2)
+        t1, t2 = reconcile_inout(t1, t2)
 
     s = StringIO()
+
+    assumptions = z3.And(
+        *list(statements1.assumed_statements()) + list(statements2.assumed_statements()) + list(funcs.statements())
+    )
+
+    if full_script:
+        if len(t1.outputs) == 0:  # enforce cleanstack
+            solver = z3.Solver()
+            claim = z3.Implies(assumptions, z3.Not(z3.And(*statements1.verify_statements())))
+            solver.add(z3.Not(claim))
+            unspendable1 = solver.check() == z3.unsat
+        else:
+            unspendable1 = True
+        if len(t2.outputs) == 0:
+            solver = z3.Solver()
+            claim = z3.Implies(assumptions, z3.Not(z3.And(*statements2.verify_statements())))
+            solver.add(z3.Not(claim))
+            unspendable2 = solver.check() == z3.unsat
+        else:
+            unspendable2 = True
+        if unspendable1 and unspendable2:
+            return None
 
     if len(t1.outputs) != len(t2.outputs):
         print('Equivalence is FALSE. The two scripts produce a different number of outputs.', file=s)
@@ -263,9 +286,6 @@ def prove_equivalence_single(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[
     if result_sorts is not None:
         return result_sorts
 
-    assumptions = z3.And(
-        *list(statements1.assumed_statements()) + list(statements2.assumed_statements()) + list(funcs.statements())
-    )
     problem = z3.And(*[a == b for a, b in zip(t1.outputs, t2.outputs)])
     if verify:
         problem = z3.And(
