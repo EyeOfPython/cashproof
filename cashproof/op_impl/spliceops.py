@@ -39,8 +39,8 @@ class OpSplit(Op):
     def statements(self, statements: Statements, op_vars: OpVars, var_names: VarNames, funcs: Funcs) -> None:
         split_idx, string = op_vars.inputs
         result1, result2 = op_vars.outputs
-        statements.assume(result1 == z3.SubString(string, 0, split_idx))
-        statements.assume(result2 == z3.SubString(string, split_idx, z3.Length(string)))
+        statements.assume(result1 == z3.SubString(string, 0, z3.BV2Int(split_idx)))
+        statements.assume(result2 == z3.SubString(string, z3.BV2Int(split_idx), z3.Length(string)))
 
 
 def _add_num_encode_assumptions(statements: Statements, num, abs_num, string, last_byte, sign_bit):
