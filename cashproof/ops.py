@@ -268,9 +268,10 @@ def prove_equivalence_single(opcodes1: Sequence[ScriptItem], opcodes2: Sequence[
     )
     problem = z3.And(*[a == b for a, b in zip(t1.outputs, t2.outputs)])
     if verify:
-        verify_problem = z3.And(*[a == b for a, b in zip(statements1.verify_statements(),
-                                                         statements2.verify_statements())])
-        problem = z3.And(problem, verify_problem)
+        problem = z3.And(
+            problem,
+            z3.And(*statements1.verify_statements()) == z3.And(*statements2.verify_statements()),
+        )
     claim = z3.Implies(assumptions, problem)
 
     solver = z3.Solver()
