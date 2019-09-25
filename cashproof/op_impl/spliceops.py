@@ -144,7 +144,7 @@ class OpSize(Op):
     def statements(self, statements: Statements, op_vars: OpVars, var_names: VarNames, funcs: Funcs) -> None:
         string, = op_vars.inputs
         size, = op_vars.outputs
-        statements.assume(z3.Length(string) == size)
+        statements.assume(z3.Length(string) == z3.BV2Int(size))
 
 
 SPLICE_OPS = [
